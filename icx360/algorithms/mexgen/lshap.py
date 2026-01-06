@@ -32,7 +32,7 @@ class LSHAP(MExGenExplainer):
             based on the model's inputs or outputs.
     """
     def explain_instance(self, input_orig, unit_types="p", ind_interest=None, output_orig=None,
-                         ind_segment=True, segment_type="s", max_phrase_length=10,
+                         ind_segment=True, segment_type="s", max_phrase_length=10, segment_type_output=None,
                          model_params={}, scalarize_params={},
                          num_neighbors=2, max_units_replace=2, replacement_str=""):
         """
@@ -53,7 +53,8 @@ class LSHAP(MExGenExplainer):
                 [input] Indicator of units to attribute to ("of interest").
                 Default None means np.array(unit_types) != "n".
             output_orig (str or List[str] or icx360.utils.model_wrappers.GeneratedOutput or None):
-                [output] Output for original input if provided, otherwise None.
+                [output] Output for original input.
+                Can be a single unit (str), segmented into units (List[str]), a GeneratedOutput object, or None.
             ind_segment (bool or List[bool]):
                 [segmentation] Whether to segment input text.
                 If bool, applies to all units; if List[bool], applies to each unit individually.
@@ -61,6 +62,9 @@ class LSHAP(MExGenExplainer):
                 [segmentation] Type of units to segment into: "s" for sentences, "w" for words, "ph" for phrases.
             max_phrase_length (int):
                 [segmentation] Maximum phrase length in terms of spaCy tokens (default 10).
+            segment_type_output (str or None):
+                [segmentation] Type of units to segment output text into:
+                "s" for sentences, "ph" for phrases, None for no segmentation.
             model_params (dict):
                 Additional keyword arguments for model generation (for the self.model.generate() method).
             scalarize_params (dict):
@@ -106,6 +110,9 @@ class LSHAP(MExGenExplainer):
 
         # 2) Generate output for original input or wrap provided output
         output_orig = self.generate_or_wrap_output(input_orig, output_orig, model_params)
+        # Segment output text if needed
+        output_orig = self.segment_output(output_orig, segment_type_output, max_phrase_length)
+        num_output_units = 1 if type(output_orig.output_text[0]) is str else len(output_orig.output_text[0])
 
         # 3) Initialize quantities
         # Initialize importance scores
@@ -115,7 +122,7 @@ class LSHAP(MExGenExplainer):
             for key in self.scalarized_model.sim_scores:
                 importance_scores[key] = np.zeros(num_units)
         else:
-            importance_scores = np.zeros(num_units)
+            importance_scores = np.zeros((num_units, num_output_units))
 
         # Initialize quantities associated with units of interest
         idx_replace_i = [None] * len(idx_interest)
@@ -187,21 +194,23 @@ class LSHAP(MExGenExplainer):
                     importance_scores[key][idx_interest[i]] = np.inner(scalar_outputs_excl_interest - scalar_outputs_incl_interest, 1 / normalization)
 
             else:
-                # Extract scalarized output corresponding to original input/empty subset
-                scalar_output_orig = scalar_outputs[0].item()
+                # Extract scalarized output(s) corresponding to original input/empty subset
+                scalar_output_orig = scalar_outputs[[0]].cpu().numpy()
                 # Extract scalarized outputs for this unit of interest
                 scalar_outputs_excl_interest = scalar_outputs[idx_excl_interest].cpu().numpy()
                 scalar_outputs_incl_interest = scalar_outputs[idx_incl_interest].cpu().numpy()
                 # Prepend output corresponding to empty subset
-                scalar_outputs_excl_interest = np.append(scalar_output_orig, scalar_outputs_excl_interest)
+                scalar_outputs_excl_interest = np.append(scalar_output_orig, scalar_outputs_excl_interest, axis=0)
 
                 # 9) Compute Shapley values
                 normalization = get_normalization_constants(len(idx_replace_i[i]), max_units_replace) * (max_units_replace + 1)
-                importance_scores[idx_interest[i]] = np.inner(scalar_outputs_excl_interest - scalar_outputs_incl_interest, 1 / normalization)
+                importance_scores[idx_interest[i]] = np.dot(1 / normalization, scalar_outputs_excl_interest - scalar_outputs_incl_interest)
 
         # 10) Construct output dictionary
         if type(importance_scores) is not dict:
             # Convert importance_scores to dictionary
+            if num_output_units == 1:
+                importance_scores = importance_scores.squeeze(axis=1)
             if isinstance(self.scalarized_model, ProbScalarizedModel):
                 # Label scores with type of scalarizer
                 importance_scores = {"prob": importance_scores}
