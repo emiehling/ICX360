@@ -83,6 +83,7 @@ class ProbScalarizedModel(Scalarizer):
             raise ValueError("ref_output must be provided for ProbScalarizedModel.scalarize_output()")
 
         # Compute log probabilities of reference output tokens conditioned on inputs
+        # Also find token boundaries of units of the reference output
         if isinstance(self.model, PipelineHFModel):
             log_probs = self._compute_log_probs_pipeline(inputs, ref_output, **kwargs)
         elif isinstance(self.model, HFModel):
