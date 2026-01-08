@@ -85,7 +85,7 @@ class ProbScalarizedModel(Scalarizer):
         # Compute log probabilities of reference output tokens conditioned on inputs
         # Also find token boundaries of units of the reference output
         if isinstance(self.model, PipelineHFModel):
-            log_probs = self._compute_log_probs_pipeline(inputs, ref_output, **kwargs)
+            log_probs, boundaries = self._compute_log_probs_pipeline(inputs, ref_output, **kwargs)
         elif isinstance(self.model, HFModel):
             log_probs, boundaries = self._compute_log_probs_hf(inputs, ref_output, **kwargs)
         elif isinstance(self.model, VLLMModel):
@@ -212,8 +212,15 @@ class ProbScalarizedModel(Scalarizer):
                 **kwargs,
             )
 
+        # Get list of reference output tokens
+        tokens = []
+        for id in ref_output_ids[0]:
+            tokens.append("" if id in self.model._tokenizer.all_special_ids else self.model._tokenizer.decode(id))
+        # Find token boundaries of units of the reference output
+        boundaries = find_unit_boundaries(ref_output.output_text[0], tokens)
+
         # log_probs must be shape: (num_inputs, gen_length)
-        return log_probs
+        return log_probs, boundaries
 
 
     def _compute_log_probs_vllm(self, inputs, ref_output, max_inputs_per_call=200, **kwargs):
