@@ -160,13 +160,34 @@ class PipelineHFModel(HFModel):
     """
     HFModel-compatible wrapper around a SteeringPipeline.
 
+    Attributes:
+        _pipeline (aisteer360.algorithms.core.SteeringPipeline):
+            AISteer360 SteeringPipeline object.
+        _model (transformers model object):
+            Underlying model object.
+        _tokenizer (transformers tokenizer):
+            Tokenizer corresponding to model.
+        _device (str):
+            Device on which the model resides.
+        _runtime_kwargs (dict or None):
+            Runtime keyword arguments.
     """
 
     def __init__(self, pipeline, tokenizer, runtime_kwargs: dict | None = None):
+        """
+        Initialize PipelineHFModel wrapper.
+
+        Args:
+            pipeline (aisteer360.algorithms.core.SteeringPipeline):
+                AISteer360 SteeringPipeline object.
+            tokenizer (transformers tokenizer):
+                Tokenizer corresponding to model.
+            runtime_kwargs (dict or None):
+                Runtime keyword arguments.
+        """
         super().__init__(pipeline.model, tokenizer)
 
         self._pipeline = pipeline
-        self._device = pipeline.model.device
         self._runtime_kwargs = runtime_kwargs
 
     def generate(

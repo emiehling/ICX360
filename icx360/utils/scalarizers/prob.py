@@ -185,6 +185,20 @@ class ProbScalarizedModel(Scalarizer):
         Compute log probabilities of reference output tokens conditioned on inputs when self.model is a PipelineHFModel.
 
         Delegates to the underlying SteeringPipeline.compute_log_probs.
+
+        Args:
+            inputs (transformers.BatchEncoding):
+                BatchEncoding of inputs produced by tokenizer.
+            ref_output (icx360.utils.model_wrappers.GeneratedOutput):
+                Reference output object containing a sequence of token IDs (ref_output.output_ids).
+            **kwargs (dict):
+                Additional keyword arguments for model.
+
+        Returns:
+            log_probs ((num_inputs, gen_length) torch.Tensor):
+                Log probabilities of reference output tokens.
+            boundaries (List[int]):
+                Token boundaries of units of the reference output.
         """
         if not isinstance(self.model, PipelineHFModel):
             raise TypeError("_compute_log_probs_pipeline requires a PipelineHFModel")
