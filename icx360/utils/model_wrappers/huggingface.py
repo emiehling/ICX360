@@ -244,9 +244,7 @@ class PipelineHFModel(HFModel):
                 runtime_kwargs=runtime_kwargs,
                 **kwargs,
             )
-
-        if not self._model.config.is_encoder_decoder:
-            output_ids = output_ids[:, input_length:]
+        # SteeringPipeline already truncates output tokens to generated tokens only, don't truncate again
 
         output_text = self._tokenizer.batch_decode(
             output_ids,
