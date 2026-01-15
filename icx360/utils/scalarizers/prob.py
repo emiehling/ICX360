@@ -184,7 +184,7 @@ class ProbScalarizedModel(Scalarizer):
         """
         Compute log probabilities of reference output tokens conditioned on inputs when self.model is a PipelineHFModel.
 
-        Delegates to the underlying SteeringPipeline.compute_log_probs.
+        Delegates to the underlying SteeringPipeline.compute_logprobs.
 
         Args:
             inputs (transformers.BatchEncoding):
@@ -218,7 +218,7 @@ class ProbScalarizedModel(Scalarizer):
             ref_output_ids = ref_output_ids.to(device)
 
         with torch.no_grad():
-            log_probs = pipeline.compute_log_probs(
+            log_probs = pipeline.compute_logprobs(
                 input_ids=input_ids,
                 attention_mask=attention_mask,
                 ref_output_ids=ref_output_ids,
