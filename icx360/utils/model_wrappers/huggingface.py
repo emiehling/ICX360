@@ -170,7 +170,7 @@ class PipelineHFModel(HFModel):
         _device (str):
             Device on which the model resides.
         _runtime_kwargs (dict or None):
-            Runtime keyword arguments.
+            Optional per-call parameters for controls at runtime.
     """
 
     def __init__(self, pipeline, tokenizer, runtime_kwargs: dict | None = None):
@@ -183,7 +183,7 @@ class PipelineHFModel(HFModel):
             tokenizer (transformers tokenizer):
                 Tokenizer corresponding to model.
             runtime_kwargs (dict or None):
-                Runtime keyword arguments.
+                Optional per-call parameters for controls at runtime.
         """
         super().__init__(pipeline.model, tokenizer)
 
